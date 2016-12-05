@@ -123,7 +123,7 @@ public class RxDataSource <T> {
                 // the view type map will contain the index of views the RxAdapter needs
                 // in order to display the correct view type for each type of row,
                 // based on the ViewModel class type
-                viewModelToViewTypeMap.put(c, ++viewTypeIndex);
+                viewModelToViewTypeMap.put(c, viewTypeIndex++);
             }
         }
 

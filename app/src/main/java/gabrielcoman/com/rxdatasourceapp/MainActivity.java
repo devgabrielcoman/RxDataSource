@@ -3,6 +3,7 @@ package gabrielcoman.com.rxdatasourceapp;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
 import android.widget.ListView;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -14,6 +15,7 @@ import java.util.List;
 
 import gabrielcoman.com.rxdatasource.RxDataSource;
 import rx.Subscriber;
+import rx.functions.Action2;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -26,6 +28,15 @@ public class MainActivity extends AppCompatActivity {
 
         getDatas().toList()
                 .subscribe(viewModels -> {
+
+                    RxDataSource.from(MainActivity.this, viewModels)
+                            .bindTo(listView)
+                            .customiseRow(R.layout.row_header, HeaderViewModel.class, new Action2<ViewModel, View>() {
+                                @Override
+                                public void call(ViewModel viewModel, View view) {
+
+                                }
+                            });
 
                     RxDataSource.from(MainActivity.this, viewModels)
                             .bindTo(listView)
@@ -79,6 +90,36 @@ public class MainActivity extends AppCompatActivity {
                 data.add(new HeaderViewModel("Header 2"));
                 data.add(new ItemViewModel("Item #3", "Lorem ipsum third"));
                 data.add(new SwitchViewModel("Button #2", false));
+                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+                data.add(new ItemViewModel("Item #2", "Lorem ipsum another"));
+                data.add(new SwitchViewModel("Button #1", true));
+                data.add(new HeaderViewModel("Header 2"));
+                data.add(new ItemViewModel("Item #3", "Lorem ipsum third"));
+                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+                data.add(new ItemViewModel("Item #2", "Lorem ipsum another"));
+                data.add(new SwitchViewModel("Button #1", true));
+                data.add(new HeaderViewModel("Header 2"));
+                data.add(new ItemViewModel("Item #3", "Lorem ipsum third"));
 
                 // send data to subscriber
                 for (ViewModel vm : data) {
