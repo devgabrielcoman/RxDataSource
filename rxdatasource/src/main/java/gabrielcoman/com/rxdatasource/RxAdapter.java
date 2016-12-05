@@ -2,7 +2,6 @@ package gabrielcoman.com.rxdatasource;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
@@ -10,60 +9,88 @@ import android.widget.ArrayAdapter;
 import java.util.ArrayList;
 import java.util.List;
 
+import rx.functions.Func1;
+
 /**
  * A custom adapter class that extends ArrayAdapter over RxRow
  */
 public class RxAdapter <T extends RxRow> extends ArrayAdapter<T> {
 
     /**
-     * Private list of T elements (usually RxRow)
+     * The internal array of data to be used by the adapter to populate the adapter
      */
     private List<T> data = new ArrayList<>();
 
     /**
-     * Custom adapter constructor
-     * @param context - the context this is going to run in
+     * Member variable that holds the number of views the adapter should be able to present
      */
-    public RxAdapter(Context context) {
+    private int numberOfViews = 0;
+
+    /**
+     * Function that will be used by the "getItemViewType" method to define what view it should
+     * display based on the position of the row
+     */
+    private Func1<Integer, Integer> viewTypeRule = null;
+
+    /**
+     * Constructor for the Adapter
+     * @param context the base context the adapter works in
+     */
+    RxAdapter(Context context) {
         super(context, 0);
     }
 
     /**
-     * One of the two main RxAdapter methods - this will always update the data the adapter holds
-     * Notice how the data is copied by reference, not replace or added to the current data set
-     * This is in order to respect data immutability for functional programming
-     * @param newData the new data set
+     * Method that updates the data for the adapter.
+     * Please note the data is copied by reference from the parameter and not added to an
+     * existing array.
+     * @param newData the new array of data of type T
      */
     void updateData(List<T> newData) {
         data = newData;
     }
 
     /**
-     * This method does the actual reloading of the table by calling the Adapter method
-     * notifyDataSetChanged
+     * A wrapper arround the inaplty named "notifyDataSetChanged"
      */
     void reloadTable () {
         notifyDataSetChanged();
     }
 
     /**
-     * Overridden adapter method getItem (for position)
-     * @param position the current position I want to get an item for
-     * @return the data or null, if the index is out of bounds
+     * Method to get an item at a certain position from the adapter
+     * @param position the position I want to get an item from
+     * @return the actual item, of type T
      */
-    @Nullable
     @Override
     public T getItem(int position) {
-        if (position < data.size()) {
-            return data.get(position);
-        } else {
-            return null;
-        }
+        return data.get(position);
     }
 
     /**
-     * Overridden adapter method getCount
-     * @return the size of the current data
+     * This method returns the number of views the adapter is able to represent
+     * @return an integer
+     */
+    @Override
+    public int getViewTypeCount() {
+        return numberOfViews;
+    }
+
+    /**
+     * This method returns the index of the view to be represented based on the current row
+     * position; It's value in the RxAdapter case is given by a member var of type Func1<int, int>
+     * that will be defined by the RxDataSource object
+     * @param position current row position
+     * @return the index of the type of view to display
+     */
+    @Override
+    public int getItemViewType(int position) {
+        return viewTypeRule.call(position);
+    }
+
+    /**
+     * Get the number of elements in the adapter
+     * @return an integer defining the nr. elements in the adapter
      */
     @Override
     public int getCount() {
@@ -71,14 +98,12 @@ public class RxAdapter <T extends RxRow> extends ArrayAdapter<T> {
     }
 
     /**
-     * Overridden adapter method getView (for position, on convert view, with parent)
-     * This method will get the data item at a certain position and call it's "getHolderView"
-     * method. If the holder view exists and is customised, then that will be what will be
-     * returned by the method and then displayed in the table
-     * @param position - the position I want to get the item for
-     * @param convertView - the basic convert view (that acts as a source for the row)
-     * @param parent - the parent, usually the list view
-     * @return - the allocated and customised list view row
+     * This method is used with RxRow type elements in the adapter to actually display a type of
+     * row for a given position
+     * @param position position of the current row
+     * @param convertView the basic view the ListView provides
+     * @param parent the parent, usually the ListView object containing the rows
+     * @return a valid, configured View
      */
     @NonNull
     @Override
@@ -87,11 +112,20 @@ public class RxAdapter <T extends RxRow> extends ArrayAdapter<T> {
     }
 
     /**
-     * Main getter for the current data
-     * @return the current data
+     * Setter method that sets the number of views the adapter should display.
+     * Usually it's called by the RxDataSource
+     * @param numberOfViews new number of views
      */
-    public List<T> getData() {
-        return data;
+    void setNumberOfViews(int numberOfViews) {
+        this.numberOfViews = numberOfViews;
     }
 
+    /**
+     * Setter method that sets the function that will guide what view type to display for a certain
+     * row number
+     * @param viewTypeRule the rule, as a Func1<Integer, Integer> type defined by RxJava
+     */
+    void setViewTypeRule(Func1<Integer, Integer> viewTypeRule) {
+        this.viewTypeRule = viewTypeRule;
+    }
 }

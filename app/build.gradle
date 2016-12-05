@@ -9,7 +9,14 @@ android {
         targetSdkVersion 24
         versionCode 1
         versionName "1.0"
+        jackOptions {
+            enabled true
+        }
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
     buildTypes {
         release {
@@ -26,4 +33,5 @@ dependencies {
     })
     compile 'com.android.support:appcompat-v7:24.1.1'
     testCompile 'junit:junit:4.12'
+    compile project(":rxdatasource")
 }
