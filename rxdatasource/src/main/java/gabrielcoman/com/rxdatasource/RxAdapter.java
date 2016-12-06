@@ -24,7 +24,7 @@ public class RxAdapter <T extends RxRow> extends ArrayAdapter<T> {
     /**
      * Member variable that holds the number of views the adapter should be able to present
      */
-    private int numberOfViews = 0;
+    private int numberOfViews = 1;
 
     /**
      * Function that will be used by the "getItemViewType" method to define what view it should

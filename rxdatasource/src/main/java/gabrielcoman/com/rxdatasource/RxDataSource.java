@@ -17,17 +17,16 @@ import rx.functions.Action2;
 import rx.functions.Func1;
 
 /**
- * Class that defines a Reactive-Functional data source that binds to a ListView and populates
- * it with RxRow objects. Each RxRow object is customised based on a "View Model" type object
- * defined by the <T> param that basically holds all of a cell's data (according to MVVM)
- * @param <T>
+ * Created by gabriel.coman on 06/12/2016.
  */
-public class RxDataSource <T> {
+
+public class RxDataSource<T> {
 
     private ListView listView = null;
     private Context context = null;
     private List<T> data = null;
-    private RxAdapter <RxRow> adapter = null;
+
+    private int viewTypeIndex = 0;
 
     private HashMap<Class, Func1<T, RxRow>> viewModelToRxRowMap = null;
     private HashMap<Class, Integer> viewModelToViewTypeMap = null;
@@ -45,9 +44,6 @@ public class RxDataSource <T> {
         // initialise the data needed by the RxDataSource object
         this.data = new ArrayList<>();
 
-        // initialise tha adapter
-        this.adapter = new RxAdapter<>(this.context);
-
         // initialise the three hash maps needed by the RxDataSource object in order to keep a
         // track of what and how it needs to display in the List View
         this.viewModelToRxRowMap = new HashMap<>();
@@ -61,7 +57,7 @@ public class RxDataSource <T> {
      *           that will be used to represent data in each of the rows, according to MVVM
      * @return a new instance of the RxDataSource object
      */
-    public static <T> RxDataSource <T> create (@NonNull Context context) {
+    public static <T> RxDataSource<T> create (@NonNull Context context) {
         return new RxDataSource<>(context);
     }
 
@@ -75,86 +71,16 @@ public class RxDataSource <T> {
      *           that will be used to represent data in each of the rows, according to MVVM
      * @return a new instance of the RxDataSource object
      */
-    public static <T> RxDataSource <T> from (@NonNull Context context, @NonNull List<T> data) {
+    public static <T> RxDataSource<T> from (@NonNull Context context, @NonNull List<T> data) {
 
         // create a new data source object over T and feed it the context
         RxDataSource<T> dataSource = new RxDataSource<>(context);
 
         // update it's data already
-        dataSource.update(data);
+        dataSource.data = data;
 
         // return it to the user
         return dataSource;
-    }
-
-    /**
-     * Method that performs an update of the current data set (every time)
-     * @param data the new data set
-     * @return the same instance of the RxDataSource object, to chain calls
-     */
-    public RxDataSource <T> update (@NonNull List<T> data) {
-
-        // update the internal data
-        // notice we copy a reference to the new data set, we don't add to the current data set
-        // in order to respect functional programming percepts
-        this.data = data;
-
-        // clear the model-to-row hash map
-        viewModelToRxRowMap.clear();
-        // clear to model-to-view-type hash map
-        viewModelToViewTypeMap.clear();
-
-        // create a view type index
-        int viewTypeIndex = 0;
-
-        // populate the main maps used by the RxDataSource
-        for (T t : this.data) {
-
-            // get the data's actual class type
-            Class c = t.getClass();
-
-            // if it's not yet in the needed maps, add to them
-            if (!viewModelToRxRowMap.containsKey(c)) {
-
-                // the row maps starts will null values since it has to be populated by
-                // calling "customiseRow" for each type of row you want to represent
-                viewModelToRxRowMap.put(c, null);
-
-                // the view type map will contain the index of views the RxAdapter needs
-                // in order to display the correct view type for each type of row,
-                // based on the ViewModel class type
-                viewModelToViewTypeMap.put(c, viewTypeIndex++);
-            }
-        }
-
-        // now update the number of views the adapter can display
-        adapter.setNumberOfViews(viewModelToRxRowMap.size());
-
-        // and what type of view to display on each position
-        adapter.setViewTypeRule(new Func1<Integer, Integer>() {
-            @Override
-            public Integer call(Integer position) {
-
-                // get the ViewModel <T> for the current position
-                T t = RxDataSource.this.data.get(position);
-
-                // and find out it's class
-                Class c = t.getClass();
-
-                // if I can find the class key in the viewModelToViewType map then return
-                // the value stored there (and I should always be able to find it)
-                if (viewModelToViewTypeMap.containsKey(c)) {
-                    return viewModelToViewTypeMap.get(c);
-                }
-                // else just return 0
-                else {
-                    return 0;
-                }
-            }
-        });
-
-        // return the current instance
-        return this;
     }
 
     /**
@@ -162,13 +88,10 @@ public class RxDataSource <T> {
      * @param listView a non-null list view
      * @return the same instance of the RxDataSource object, to chain calls
      */
-    public RxDataSource <T> bindTo (@NonNull ListView listView) {
+    public RxDataSource<T> bindTo (@NonNull ListView listView) {
 
         // update the internal list view reference
         this.listView = listView;
-
-        // set the list view adapter to our current RxAdapter
-        listView.setAdapter(adapter);
 
         // start the item clicks observer and share it
         itemClicksObserver = RxAdapterView.itemClicks(listView).share();
@@ -190,7 +113,7 @@ public class RxDataSource <T> {
      *                      row type is rowId
      * @return the same instance of the RxDataSource object, to chain calls
      */
-    public RxDataSource <T> customiseRow (final int rowId, @NonNull Class viewModelClass, @NonNull final Action2<T, View> func) {
+    public RxDataSource<T> customiseRow (final int rowId, @NonNull Class viewModelClass, @NonNull final Action2<T, View> func) {
 
         // if the list view is null then don't load anything and return
         if (this.listView == null) {
@@ -222,40 +145,8 @@ public class RxDataSource <T> {
         // put the new Func1 object in the corresponding key of the "viewModelToRxRow" hash map
         viewModelToRxRowMap.put(viewModelClass, newFunc);
 
-        // return the current instance
-        return this;
-    }
-
-    /**
-     * Final method of the class, from the user's perspective, that actually repopulates the
-     * ListView with new data
-     * @return the same instance of the RxDataSource object, to chain calls
-     */
-    public RxDataSource <T> fire () {
-
-        // if it does, don't go further
-        if (viewModelToRxRowMap.containsValue(null)) {
-            return this;
-        }
-
-        // then, if all is OK, start updating the table data
-        Observable.from(this.data)
-                .map(new Func1<T, RxRow>() {
-                    @Override
-                    public RxRow call(T t) {
-                        Func1<T, RxRow> mappingFunc = viewModelToRxRowMap.get(t.getClass());
-                        return mappingFunc.call(t);
-                    }
-                })
-                .toList()
-                .subscribe(new Action1<List<RxRow>>() {
-                    @Override
-                    public void call(List<RxRow> rxRows) {
-                        // finally update the adapter with new RxRows objects and reload the table
-                        adapter.updateData(rxRows);
-                        adapter.reloadTable();
-                    }
-                });
+        // put the new index object in the corresponding key of the "viewModelToViewTypeMap" hash
+        viewModelToViewTypeMap.put(viewModelClass, viewTypeIndex++);
 
         // return the current instance
         return this;
@@ -267,7 +158,7 @@ public class RxDataSource <T> {
      * @param action the action function, defined as an Action2 callback from RxJava
      * @return the same instance of the RxDataSource object, to chain calls
      */
-    public RxDataSource <T> onRowClick (final int rowId, @NonNull final Action2<Integer, T> action) {
+    public RxDataSource<T> onRowClick (final int rowId, @NonNull final Action2<Integer, T> action) {
 
         // if this is null then don't go forward
         if (itemClicksObserver == null) {
@@ -306,6 +197,105 @@ public class RxDataSource <T> {
 
                     }
                 });
+
+        // return the current instance
+        return this;
+    }
+
+    /**
+     * Method that performs an update of the current data set (every time)
+     * @param data the new data set
+     * @return the same instance of the RxDataSource object, to chain calls
+     */
+    public RxDataSource<T> update (@NonNull List<T> data) {
+
+        // update the internal data
+        // notice we copy a reference to the new data set, we don't add to the current data set
+        // in order to respect functional programming percepts
+        this.data = data;
+
+        // check this
+        if (viewModelToRxRowMap.keySet().size() == 0 || viewModelToRxRowMap.containsValue(null)) {
+            return this;
+        }
+
+        // create the actual data array to be used by the adapter, which will only contain
+        // elements that are of the same Class as any one of the ones from the viewModelToRxMap
+        // hash map
+        List<T> usableData = new ArrayList<>();
+
+        for (T t : this.data) {
+            Class c = t.getClass();
+            if (viewModelToRxRowMap.containsKey(c)) {
+                usableData.add(t);
+            }
+        }
+
+        // initialise tha adapter
+        final RxAdapter <RxRow> adapter = new RxAdapter<>(this.context);
+
+        // now update the number of views the adapter can display
+        adapter.setNumberOfViews(viewModelToRxRowMap.size());
+
+        // and what type of view to display on each position
+        adapter.setViewTypeRule(new Func1<Integer, Integer>() {
+            @Override
+            public Integer call(Integer position) {
+
+                // get the ViewModel <T> for the current position
+                T t = RxDataSource.this.data.get(position);
+
+                // and find out it's class
+                Class c = t.getClass();
+
+                // if I can find the class key in the viewModelToViewType map then return
+                // the value stored there (and I should always be able to find it)
+                if (viewModelToViewTypeMap.containsKey(c)) {
+                    return viewModelToViewTypeMap.get(c);
+                }
+                // else just return 0
+                else {
+                    return 0;
+                }
+            }
+        });
+
+        // then, if all is OK, start updating the table data
+        Observable.from(usableData)
+                .map(new Func1<T, RxRow>() {
+                    @Override
+                    public RxRow call(T t) {
+                        Func1<T, RxRow> mappingFunc = viewModelToRxRowMap.get(t.getClass());
+                        return mappingFunc.call(t);
+                    }
+                })
+                .toList()
+                .subscribe(new Action1<List<RxRow>>() {
+                    @Override
+                    public void call(List<RxRow> rxRows) {
+                        // set the list view adapter to our current RxAdapter
+                        listView.setAdapter(adapter);
+
+                        // finally update the adapter with new RxRows objects
+                        adapter.updateData(rxRows);
+
+                        // and reload the table
+                        adapter.reloadTable();
+                    }
+                });
+
+        // return the current instance
+        return this;
+    }
+
+    /**
+     * Update / refresh method
+     * @return the same instance of the RxDataSource object, to chain calls
+     */
+    public RxDataSource<T> update () {
+
+        // call to the main update method with the current data as params
+        this.update(this.data);
 
         // return the current instance
         return this;

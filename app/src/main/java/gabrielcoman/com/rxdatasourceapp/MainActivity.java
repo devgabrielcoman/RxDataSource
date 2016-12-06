@@ -3,7 +3,7 @@ package gabrielcoman.com.rxdatasourceapp;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.View;
+import android.widget.Button;
 import android.widget.ListView;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -15,9 +15,10 @@ import java.util.List;
 
 import gabrielcoman.com.rxdatasource.RxDataSource;
 import rx.Subscriber;
-import rx.functions.Action2;
 
 public class MainActivity extends AppCompatActivity {
+
+    private RxDataSource<ViewModel> dataSource2 = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -25,20 +26,16 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         ListView listView = (ListView) findViewById(R.id.MyListView);
+        Button update = (Button) findViewById(R.id.UpdateDataSet);
+
+        RxView.clicks(update)
+                .subscribe(this::updateDataSet);
 
         getDatas().toList()
                 .subscribe(viewModels -> {
 
-                    RxDataSource.from(MainActivity.this, viewModels)
-                            .bindTo(listView)
-                            .customiseRow(R.layout.row_header, HeaderViewModel.class, new Action2<ViewModel, View>() {
-                                @Override
-                                public void call(ViewModel viewModel, View view) {
-
-                                }
-                            });
-
-                    RxDataSource.from(MainActivity.this, viewModels)
+                    dataSource2 = RxDataSource.create(MainActivity.this);
+                    dataSource2
                             .bindTo(listView)
                             .customiseRow(R.layout.row_header, HeaderViewModel.class, (viewModel, holderView) -> {
 
@@ -70,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
                             })
                             .onRowClick(R.layout.row_item, (integer, viewModel) -> Log.d("RxDataSource", "Wohoo it works!"))
                             .onRowClick(R.layout.row_header, (integer, viewModel) -> Log.d("RxDataSource", "Header click!"))
-                            .fire();
+                            .update(viewModels);
 
                 });
 
@@ -129,7 +126,18 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+    }
 
+    private void updateDataSet (Void v) {
+
+        List<ViewModel> data = new ArrayList<>();
+        data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+        data.add(new HeaderViewModel("Header 1"));
+        data.add(new ItemViewModel("Item #2", "Lorem ipsum another"));
+        data.add(new SwitchViewModel("Button #1", true));
+        data.add(new HeaderViewModel("Header 2"));
+
+        dataSource2.update(data);
     }
 
 }
