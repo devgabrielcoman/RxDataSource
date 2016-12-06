@@ -17,20 +17,80 @@ import rx.functions.Action2;
 import rx.functions.Func1;
 
 /**
- * Created by gabriel.coman on 06/12/2016.
+ * A class that represents a Data Source that needs to be bound to a table.
+ * The workflow is that you can define a data source of "ViewModel" generic objects (<T>) and
+ * use the DataSource to describe how each type of row associated with the ViewModel looks like,
+ * as well as what happens when a user clicks on a row.
+ *
+ * Proposed way of working:
+ *
+ * ListView listView = (ListView) findViewById (R.id.myListView);
+ * List <T> dataSource = getDataSource ();
+ *
+ * Observable.from (dataSource)
+ *  .toList ()
+ *  .subscribe (data ->
+ *
+ *      RxDataSource.create (MainActivity.this)
+ *          .bindTo (listView)
+ *          .customiseRow (R.layout.my_row, CustomRow.class, (viewModel, view) -> {
+ *
+ *              TextView text = (TextView) view.findViewById (R.id.title);
+ *              title.setText (viewModel.getTitle ());
+ *
+ *          })
+ *          .update (data);
+ *
+ *  )
+ *
+ * @param <T>
  */
 
-public class RxDataSource<T> {
+public class RxDataSource <T> {
 
-    private ListView listView = null;
+    /**
+     * Reference to the current context
+     */
     private Context context = null;
+
+    /**
+     * Reference to the list view that the adapter and data source should be linked to
+     */
+    private ListView listView = null;
+
+    /**
+     * A list of data objects of type <T>. This should be the View Models that represent each row,
+     * as described in the MVVM pattern (https://en.wikipedia.org/wiki/Model-view-viewmodel)
+     */
     private List<T> data = null;
 
+    /**
+     * An index of all the view types being registered. This should be incremented each time the
+     * "customiseRow" method is called.
+     */
     private int viewTypeIndex = 0;
 
+    /**
+     * A hash map containing keys of type Class and values of type Func1 <T, RxRow>.
+     * This will get filled each time the "customiseRow" method gets called.
+     * For each type of Class registered in the hash map a function will be defined to tell how
+     * the ViewModel is to be transformed into an RxRow type object (that will in turn tell
+     * the adapter how to draw the cell)
+     */
     private HashMap<Class, Func1<T, RxRow>> viewModelToRxRowMap = null;
+
+    /**
+     * A hash map containing keys of type Class and values of type Integer.
+     * This will get filled each time the "customiseRow" method gets called.
+     * For each type of Class registered in the hash map this will record the type of view
+     * that should get represented, as desired by the Android Adapter class (where view types
+     * are integers)
+     */
     private HashMap<Class, Integer> viewModelToViewTypeMap = null;
 
+    /**
+     * An observable over Integer that is used by the ListView to record clicks for each row.
+     */
     private Observable<Integer> itemClicksObserver = null;
 
     /**
@@ -122,7 +182,7 @@ public class RxDataSource<T> {
 
         // define a new Func1 object that operates on a "View Model" <T> type and
         // returns  RxRow object
-        Func1<T, RxRow> newFunc = new Func1<T, RxRow>() {
+        viewModelToRxRowMap.put(viewModelClass, new Func1<T, RxRow>() {
             @Override
             public RxRow call(T t) {
 
@@ -140,10 +200,7 @@ public class RxDataSource<T> {
                 // and then return the RxRow object
                 return row;
             }
-        };
-
-        // put the new Func1 object in the corresponding key of the "viewModelToRxRow" hash map
-        viewModelToRxRowMap.put(viewModelClass, newFunc);
+        });
 
         // put the new index object in the corresponding key of the "viewModelToViewTypeMap" hash
         viewModelToViewTypeMap.put(viewModelClass, viewTypeIndex++);
@@ -207,80 +264,60 @@ public class RxDataSource<T> {
      * @param data the new data set
      * @return the same instance of the RxDataSource object, to chain calls
      */
-    public RxDataSource<T> update (@NonNull List<T> data) {
-
-        // update the internal data
-        // notice we copy a reference to the new data set, we don't add to the current data set
-        // in order to respect functional programming percepts
-        this.data = data;
-
-        // check this
-        if (viewModelToRxRowMap.keySet().size() == 0 || viewModelToRxRowMap.containsValue(null)) {
-            return this;
-        }
-
-        // create the actual data array to be used by the adapter, which will only contain
-        // elements that are of the same Class as any one of the ones from the viewModelToRxMap
-        // hash map
-        List<T> usableData = new ArrayList<>();
-
-        for (T t : this.data) {
-            Class c = t.getClass();
-            if (viewModelToRxRowMap.containsKey(c)) {
-                usableData.add(t);
-            }
-        }
+    public RxDataSource <T> update (@NonNull List<T> data) {
 
         // initialise tha adapter
         final RxAdapter <RxRow> adapter = new RxAdapter<>(this.context);
 
-        // now update the number of views the adapter can display
-        adapter.setNumberOfViews(viewModelToRxRowMap.size());
-
-        // and what type of view to display on each position
-        adapter.setViewTypeRule(new Func1<Integer, Integer>() {
-            @Override
-            public Integer call(Integer position) {
-
-                // get the ViewModel <T> for the current position
-                T t = RxDataSource.this.data.get(position);
-
-                // and find out it's class
-                Class c = t.getClass();
-
-                // if I can find the class key in the viewModelToViewType map then return
-                // the value stored there (and I should always be able to find it)
-                if (viewModelToViewTypeMap.containsKey(c)) {
-                    return viewModelToViewTypeMap.get(c);
-                }
-                // else just return 0
-                else {
-                    return 0;
-                }
-            }
-        });
-
-        // then, if all is OK, start updating the table data
-        Observable.from(usableData)
-                .map(new Func1<T, RxRow>() {
+        Observable.from(data)
+                .filter(new Func1<T, Boolean>() {
                     @Override
-                    public RxRow call(T t) {
-                        Func1<T, RxRow> mappingFunc = viewModelToRxRowMap.get(t.getClass());
-                        return mappingFunc.call(t);
+                    public Boolean call(T t) {
+                        return viewModelToRxRowMap.containsKey(t.getClass());
                     }
                 })
                 .toList()
-                .subscribe(new Action1<List<RxRow>>() {
+                .subscribe(new Action1<List<T>>() {
                     @Override
-                    public void call(List<RxRow> rxRows) {
-                        // set the list view adapter to our current RxAdapter
-                        listView.setAdapter(adapter);
+                    public void call(final List<T> ts) {
 
-                        // finally update the adapter with new RxRows objects
-                        adapter.updateData(rxRows);
+                        // set adapter number of views and the view type rule
+                        adapter.setNumberOfViews(viewModelToRxRowMap.size());
+                        adapter.setViewTypeRule(new Func1<Integer, Integer>() {
+                            @Override
+                            public Integer call(Integer pos) {
+                                return viewModelToViewTypeMap.get(ts.get(pos).getClass());
+                            }
+                        });
 
-                        // and reload the table
-                        adapter.reloadTable();
+                        // update data
+                        RxDataSource.this.data = ts;
+
+                        // take the valid rows and map them to RxRows based on the function
+                        // for each type of class
+                        Observable.from(RxDataSource.this.data )
+                                .map(new Func1<T, RxRow>() {
+                                    @Override
+                                    public RxRow call(T t) {
+                                        Func1<T, RxRow> mappingFunc = viewModelToRxRowMap.get(t.getClass());
+                                        return mappingFunc.call(t);
+                                    }
+                                })
+                                .toList()
+                                .subscribe(new Action1<List<RxRow>>() {
+                                    @Override
+                                    public void call(List<RxRow> rxRows) {
+                                        // set the list view adapter to our current RxAdapter
+                                        listView.setAdapter(adapter);
+
+                                        // finally update the adapter with new RxRows objects
+                                        adapter.updateData(rxRows);
+
+                                        // and reload the table
+                                        adapter.reloadTable();
+                                    }
+                                });
+
                     }
                 });
 
