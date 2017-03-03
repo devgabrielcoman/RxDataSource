@@ -3,6 +3,7 @@ package gabrielcoman.com.rxdatasourceapp;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.Switch;
@@ -11,14 +12,14 @@ import android.widget.TextView;
 import com.jakewharton.rxbinding.view.RxView;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import gabrielcoman.com.rxdatasource.RxDataSource;
-import rx.Subscriber;
+import rx.functions.Action1;
+import rx.functions.Action2;
 
 public class MainActivity extends AppCompatActivity {
-
-    private RxDataSource<ViewModel> dataSource2 = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,110 +35,127 @@ public class MainActivity extends AppCompatActivity {
         getDatas().toList()
                 .subscribe(viewModels -> {
 
-                    dataSource2 = RxDataSource.create(MainActivity.this);
-                    dataSource2
+                    RxDataSource.create(this)
                             .bindTo(listView)
-                            .customiseRow(R.layout.row_header, HeaderViewModel.class, (viewModel, holderView) -> {
+                            .customiseRow(R.layout.row_header, HeaderViewModel.class, new Action2<HeaderViewModel, View>() {
+                                @Override
+                                public void call(HeaderViewModel header, View view) {
 
-                                HeaderViewModel header = (HeaderViewModel) viewModel;
-                                TextView title = (TextView) holderView.findViewById(R.id.HeaderTitle);
-                                title.setText(header.getTitle());
+                                    TextView title = (TextView) view.findViewById(R.id.HeaderTitle);
+                                    title.setText(header.getTitle());
 
+                                }
                             })
-                            .customiseRow(R.layout.row_item, ItemViewModel.class, (viewModel, holderView) -> {
+                            .customiseRow(R.layout.row_item, ItemViewModel.class, new Action2<ItemViewModel, View>() {
+                                @Override
+                                public void call(ItemViewModel item, View view) {
 
-                                ItemViewModel item = (ItemViewModel) viewModel;
-                                TextView title = (TextView) holderView.findViewById(R.id.ItemTitle);
-                                TextView details = (TextView) holderView.findViewById(R.id.ItemDetails);
-                                title.setText(item.getName());
-                                details.setText(item.getDetails());
+                                    TextView title = (TextView) view.findViewById(R.id.ItemTitle);
+                                    TextView details = (TextView) view.findViewById(R.id.ItemDetails);
+                                    title.setText(item.getName());
+                                    details.setText(item.getDetails());
 
+                                }
                             })
-                            .customiseRow(R.layout.row_switch, SwitchViewModel.class, (viewModel, holderView) -> {
+                            .customiseRow(R.layout.row_switch, SwitchViewModel.class, new Action2<SwitchViewModel, View>() {
+                                @Override
+                                public void call(SwitchViewModel sw, View view) {
 
-                                SwitchViewModel sw = (SwitchViewModel) viewModel;
-                                TextView title = (TextView) holderView.findViewById(R.id.SwitchTitle);
-                                Switch swbutton = (Switch) holderView.findViewById(R.id.SwitchButton);
-                                title.setText(sw.getTitle());
-                                swbutton.setChecked(sw.isActive());
+                                    TextView title = (TextView) view.findViewById(R.id.SwitchTitle);
+                                    Switch swbtn = (Switch) view.findViewById(R.id.SwitchButton);
+                                    title.setText(sw.getTitle());
+                                    swbtn.setChecked(sw.isActive());
 
-                                RxView.clicks(swbutton).subscribe(aVoid -> {
-                                    sw.setActive(swbutton.isChecked());
-                                });
+                                    RxView.clicks(swbtn).subscribe(aVoid -> {
+                                        sw.setActive(swbtn.isChecked());
+                                    });
+
+                                }
                             })
-                            .onRowClick(R.layout.row_item, (integer, viewModel) -> Log.d("RxDataSource", "Wohoo it works!"))
-                            .onRowClick(R.layout.row_header, (integer, viewModel) -> Log.d("RxDataSource", "Header click!"))
+                            .onRowClick(R.layout.row_header, new Action1<Integer>() {
+                                @Override
+                                public void call(Integer pos) {
+
+                                    Log.d("RX-DATA", "Clicked on Header " + pos);
+
+                                }
+                            })
+                            .onRowClick(R.layout.row_item, new Action1<Integer>() {
+                                @Override
+                                public void call(Integer pos) {
+
+                                    Log.d("RX-DATA", "Clicked on Item " + pos);
+
+                                }
+                            })
                             .update(viewModels);
 
                 });
 
     }
 
-    private rx.Observable<ViewModel> getDatas () {
+    private rx.Observable<Object> getDatas () {
 
-        return rx.Observable.create(new rx.Observable.OnSubscribe<ViewModel>() {
-            @Override
-            public void call(Subscriber<? super ViewModel> subscriber) {
+        return rx.Observable.create(subscriber -> {
 
-                List<ViewModel> data = new ArrayList<>();
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new HeaderViewModel("Header 1"));
-                data.add(new ItemViewModel("Item #2", "Lorem ipsum another"));
-                data.add(new SwitchViewModel("Button #1", true));
-                data.add(new HeaderViewModel("Header 2"));
-                data.add(new ItemViewModel("Item #3", "Lorem ipsum third"));
-                data.add(new SwitchViewModel("Button #2", false));
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new ItemViewModel("Item #2", "Lorem ipsum another"));
-                data.add(new SwitchViewModel("Button #1", true));
-                data.add(new HeaderViewModel("Header 2"));
-                data.add(new ItemViewModel("Item #3", "Lorem ipsum third"));
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
-                data.add(new ItemViewModel("Item #2", "Lorem ipsum another"));
-                data.add(new SwitchViewModel("Button #1", true));
-                data.add(new HeaderViewModel("Header 2"));
-                data.add(new ItemViewModel("Item #3", "Lorem ipsum third"));
+            List<Object> data = new ArrayList<>();
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new HeaderViewModel("Header 1"));
+            data.add(new ItemViewModel("Item #2", "Lorem ipsum another"));
+            data.add(new SwitchViewModel("Button #1", true));
+            data.add(new HeaderViewModel("Header 2"));
+            data.add(new ItemViewModel("Item #3", "Lorem ipsum third"));
+            data.add(new SwitchViewModel("Button #2", false));
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new ItemViewModel("Item #2", "Lorem ipsum another"));
+            data.add(new SwitchViewModel("Button #1", true));
+            data.add(new HeaderViewModel("Header 3"));
+            data.add(new ItemViewModel("Item #3", "Lorem ipsum third"));
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
+            data.add(new ItemViewModel("Item #2", "Lorem ipsum another"));
+            data.add(new SwitchViewModel("Button #1", true));
+            data.add(new HeaderViewModel("Header 4"));
+            data.add(new ItemViewModel("Item #3", "Lorem ipsum third"));
 
-                // send data to subscriber
-                for (ViewModel vm : data) {
-                    subscriber.onNext(vm);
-                }
-                subscriber.onCompleted();
-
+            // send data to subscriber
+            for (Object vm : data) {
+                subscriber.onNext(vm);
             }
+            subscriber.onCompleted();
+
         });
     }
 
     private void updateDataSet (Void v) {
 
-        List<ViewModel> data = new ArrayList<>();
+        List<Object> data = new ArrayList<>();
         data.add(new ItemViewModel("Item #1", "Lorem ipsum something"));
         data.add(new HeaderViewModel("Header 1"));
         data.add(new ItemViewModel("Item #2", "Lorem ipsum another"));
         data.add(new SwitchViewModel("Button #1", true));
         data.add(new HeaderViewModel("Header 2"));
 
-        dataSource2.update(data);
+//        dataSource2.update(data);
     }
 
 }

@@ -4,7 +4,7 @@ package gabrielcoman.com.rxdatasourceapp;
  * Created by gabriel.coman on 05/12/2016.
  */
 
-public class ItemViewModel extends ViewModel {
+public class ItemViewModel {
     private String name;
     private String details;
 

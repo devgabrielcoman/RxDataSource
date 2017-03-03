@@ -2,11 +2,7 @@ package gabrielcoman.com.rxdatasourceapp;
 
 import android.util.Log;
 
-/**
- * Created by gabriel.coman on 05/12/2016.
- */
-
-public class SwitchViewModel extends ViewModel {
+public class SwitchViewModel {
 
     private String title;
 
