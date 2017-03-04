@@ -37,18 +37,18 @@ public class MainActivity extends AppCompatActivity {
 
                     RxDataSource.create(this)
                             .bindTo(listView)
-                            .customiseRow(R.layout.row_header, HeaderViewModel.class, new Action2<HeaderViewModel, View>() {
+                            .customiseRow(R.layout.row_header, HeaderViewModel.class, new Action2<View, HeaderViewModel> () {
                                 @Override
-                                public void call(HeaderViewModel header, View view) {
+                                public void call(View view, HeaderViewModel header) {
 
                                     TextView title = (TextView) view.findViewById(R.id.HeaderTitle);
                                     title.setText(header.getTitle());
 
                                 }
                             })
-                            .customiseRow(R.layout.row_item, ItemViewModel.class, new Action2<ItemViewModel, View>() {
+                            .customiseRow(R.layout.row_item, ItemViewModel.class, new Action2<View, ItemViewModel>() {
                                 @Override
-                                public void call(ItemViewModel item, View view) {
+                                public void call(View view, ItemViewModel item) {
 
                                     TextView title = (TextView) view.findViewById(R.id.ItemTitle);
                                     TextView details = (TextView) view.findViewById(R.id.ItemDetails);
@@ -57,9 +57,9 @@ public class MainActivity extends AppCompatActivity {
 
                                 }
                             })
-                            .customiseRow(R.layout.row_switch, SwitchViewModel.class, new Action2<SwitchViewModel, View>() {
+                            .customiseRow(R.layout.row_switch, SwitchViewModel.class, new Action2<View, SwitchViewModel>() {
                                 @Override
-                                public void call(SwitchViewModel sw, View view) {
+                                public void call(View view, SwitchViewModel sw) {
 
                                     TextView title = (TextView) view.findViewById(R.id.SwitchTitle);
                                     Switch swbtn = (Switch) view.findViewById(R.id.SwitchButton);
@@ -75,17 +75,13 @@ public class MainActivity extends AppCompatActivity {
                             .onRowClick(R.layout.row_header, new Action1<Integer>() {
                                 @Override
                                 public void call(Integer pos) {
-
                                     Log.d("RX-DATA", "Clicked on Header " + pos);
-
                                 }
                             })
-                            .onRowClick(R.layout.row_item, new Action1<Integer>() {
+                            .onRowClick(R.layout.row_item, new Action2<Integer, ItemViewModel>() {
                                 @Override
-                                public void call(Integer pos) {
-
-                                    Log.d("RX-DATA", "Clicked on Item " + pos);
-
+                                public void call(Integer pos, ItemViewModel model) {
+                                    Log.d("RX-DATA", "Clicked on Item " + pos + " | " + model.getName());
                                 }
                             })
                             .update(viewModels);

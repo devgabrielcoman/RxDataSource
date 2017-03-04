@@ -21,7 +21,7 @@ public class RxDataSource {
     private int viewTypeIndex = 0;
     private HashMap<Class, Func1<Object, RxRow>> modelToRowMap = new HashMap<>();
     private HashMap<Class, Integer> modelToViewTypeMap = new HashMap<>();
-    private HashMap<Integer, Action1<Integer>> rowIdToClick = new HashMap<>();
+    private HashMap<Integer, Action2<Integer, Object>> rowIdToClick = new HashMap<>();
 
     public static RxDataSource create (Context context) {
         RxDataSource dataSource = new RxDataSource();
@@ -34,7 +34,7 @@ public class RxDataSource {
         return this;
     }
 
-    public <T> RxDataSource customiseRow (final int rowId, final Class<T> modelClass, final Action2<T, View> func) {
+    public <T> RxDataSource customiseRow (final int rowId, final Class<T> modelClass, final Action2<View, T> func) {
 
         if (listView == null) return this;
 
@@ -44,7 +44,7 @@ public class RxDataSource {
 
                 RxRow row = new RxRow(context, rowId, modelClass, listView);
                 View holder = row.getHolderView();
-                func.call((T) o, holder);
+                func.call(holder, (T) o);
 
                 return row;
             }
@@ -55,12 +55,27 @@ public class RxDataSource {
         return this;
     }
 
-    public <T> RxDataSource onRowClick (final int rowId, final Action1<Integer> action) {
-        rowIdToClick.put(rowId, action);
+    public RxDataSource onRowClick (final  int rowId, final Action1<Integer> action) {
+        rowIdToClick.put(rowId, new Action2<Integer, Object>() {
+            @Override
+            public void call(Integer integer, Object o) {
+                action.call(integer);
+            }
+        });
         return this;
     }
 
-    public <T> RxDataSource update (List<T> data) {
+    public <T> RxDataSource onRowClick (final int rowId, final Action2<Integer, T> action) {
+        rowIdToClick.put(rowId, new Action2<Integer, Object>() {
+            @Override
+            public void call(Integer integer, Object o) {
+                action.call(integer, (T) o);
+            }
+        });
+        return this;
+    }
+
+    public <T> RxDataSource update (final List<T> data) {
 
         Observable.from(data)
                 .filter(new Func1<T, Boolean>() {
@@ -70,44 +85,53 @@ public class RxDataSource {
                         return modelToRowMap.containsKey(itemClass);
                     }
                 })
-                .map(new Func1<T, RxRow>() {
-                    @Override
-                    public RxRow call(T item) {
-                        Class itemClass = item.getClass();
-                        Func1<Object, RxRow> mappingFunc = modelToRowMap.get(itemClass);
-                        return mappingFunc.call(item);
-                    }
-                })
                 .toList()
-                .subscribe(new Action1<List<RxRow>>() {
+                .subscribe(new Action1<List<T>>() {
                     @Override
-                    public void call(final List<RxRow> rows) {
+                    public void call(final List<T> filteredData) {
 
-                        final RxAdapter adapter = new RxAdapter(context);
-                        adapter.setViewTypeCount(modelToRowMap.size());
-                        adapter.setItemViewType(new Func1<Integer, Integer>() {
-                            @Override
-                            public Integer call(Integer pos) {
-                                RxRow row = rows.get(pos);
-                                Class itemClass = row.getRowClass();
-                                return modelToViewTypeMap.get(itemClass);
-                            }
-                        });
-
-                        listView.setAdapter(adapter);
-                        adapter.updateData(rows);
-                        adapter.reloadTable();
-
-                        RxAdapterView.itemClicks(listView)
-                                .subscribe(new Action1<Integer>() {
+                        Observable.from(filteredData)
+                                .map(new Func1<T, RxRow>() {
                                     @Override
-                                    public void call(Integer pos) {
+                                    public RxRow call(T item) {
+                                        Class itemClass = item.getClass();
+                                        Func1<Object, RxRow> mappingFunc = modelToRowMap.get(itemClass);
+                                        return mappingFunc.call(item);
+                                    }
+                                })
+                                .toList()
+                                .subscribe(new Action1<List<RxRow>>() {
+                                    @Override
+                                    public void call(final List<RxRow> rows) {
 
-                                        RxRow row = rows.get(pos);
-                                        int id = row.getRowId();
-                                        Action1<Integer> action1 = rowIdToClick.get(id);
-                                        action1.call(pos);
+                                        final RxAdapter adapter = new RxAdapter(context);
+                                        adapter.setViewTypeCount(modelToRowMap.size());
+                                        adapter.setItemViewType(new Func1<Integer, Integer>() {
+                                            @Override
+                                            public Integer call(Integer pos) {
+                                                RxRow row = rows.get(pos);
+                                                Class itemClass = row.getRowClass();
+                                                return modelToViewTypeMap.get(itemClass);
+                                            }
+                                        });
 
+                                        listView.setAdapter(adapter);
+                                        adapter.updateData(rows);
+                                        adapter.reloadTable();
+
+                                        RxAdapterView.itemClicks(listView)
+                                                .subscribe(new Action1<Integer>() {
+                                                    @Override
+                                                    public void call(Integer pos) {
+
+                                                        T dt = filteredData.get(pos);
+                                                        RxRow row = rows.get(pos);
+                                                        int id = row.getRowId();
+                                                        Action2<Integer, Object> action1 = rowIdToClick.get(id);
+                                                        action1.call(pos, dt);
+
+                                                    }
+                                                });
                                     }
                                 });
 
