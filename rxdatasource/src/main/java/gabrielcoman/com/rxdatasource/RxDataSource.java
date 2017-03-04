@@ -128,7 +128,9 @@ public class RxDataSource {
                                                         RxRow row = rows.get(pos);
                                                         int id = row.getRowId();
                                                         Action2<Integer, Object> action1 = rowIdToClick.get(id);
-                                                        action1.call(pos, dt);
+                                                        if (action1 != null) {
+                                                            action1.call(pos, dt);
+                                                        }
 
                                                     }
                                                 });
