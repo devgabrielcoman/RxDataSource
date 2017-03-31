@@ -12,12 +12,12 @@ import android.widget.TextView;
 import com.jakewharton.rxbinding.view.RxView;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import gabrielcoman.com.rxdatasource.RxDataSource;
 import rx.functions.Action1;
 import rx.functions.Action2;
+import rx.functions.Action3;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -37,18 +37,22 @@ public class MainActivity extends AppCompatActivity {
 
                     RxDataSource.create(this)
                             .bindTo(listView)
-                            .customiseRow(R.layout.row_header, HeaderViewModel.class, new Action2<View, HeaderViewModel> () {
+                            .customiseRow(R.layout.row_header, HeaderViewModel.class, new Action3<Integer, View, HeaderViewModel>() {
                                 @Override
-                                public void call(View view, HeaderViewModel header) {
+                                public void call(Integer i, View view, HeaderViewModel header) {
+
+                                    Log.d("SuperAwesome", "Customising 1 row " + i);
 
                                     TextView title = (TextView) view.findViewById(R.id.HeaderTitle);
                                     title.setText(header.getTitle());
 
                                 }
                             })
-                            .customiseRow(R.layout.row_item, ItemViewModel.class, new Action2<View, ItemViewModel>() {
+                            .customiseRow(R.layout.row_item, ItemViewModel.class, new Action3<Integer, View, ItemViewModel>() {
                                 @Override
-                                public void call(View view, ItemViewModel item) {
+                                public void call(Integer i, View view, ItemViewModel item) {
+
+                                    Log.d("SuperAwesome", "Customising 2 row " + i);
 
                                     TextView title = (TextView) view.findViewById(R.id.ItemTitle);
                                     TextView details = (TextView) view.findViewById(R.id.ItemDetails);
@@ -57,9 +61,11 @@ public class MainActivity extends AppCompatActivity {
 
                                 }
                             })
-                            .customiseRow(R.layout.row_switch, SwitchViewModel.class, new Action2<View, SwitchViewModel>() {
+                            .customiseRow(R.layout.row_switch, SwitchViewModel.class, new Action3<Integer, View, SwitchViewModel>() {
                                 @Override
-                                public void call(View view, SwitchViewModel sw) {
+                                public void call(Integer i, View view, SwitchViewModel sw) {
+
+                                    Log.d("SuperAwesome", "Customising 3 row " + i);
 
                                     TextView title = (TextView) view.findViewById(R.id.SwitchTitle);
                                     Switch swbtn = (Switch) view.findViewById(R.id.SwitchButton);

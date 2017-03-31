@@ -6,20 +6,23 @@ import android.widget.ListView;
 
 import com.jakewharton.rxbinding.widget.RxAdapterView;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
 import rx.Observable;
 import rx.functions.Action1;
 import rx.functions.Action2;
+import rx.functions.Action3;
 import rx.functions.Func1;
+import rx.functions.Func2;
 
 public class RxDataSource {
 
     private Context context = null;
     private ListView listView = null;
     private int viewTypeIndex = 0;
-    private HashMap<Class, Func1<Object, RxRow>> modelToRowMap = new HashMap<>();
+    private HashMap<Class, Func2<Integer, Object, RxRow>> modelToRowMap = new HashMap<>();
     private HashMap<Class, Integer> modelToViewTypeMap = new HashMap<>();
     private HashMap<Integer, Action2<Integer, Object>> rowIdToClick = new HashMap<>();
 
@@ -34,17 +37,17 @@ public class RxDataSource {
         return this;
     }
 
-    public <T> RxDataSource customiseRow (final int rowId, final Class<T> modelClass, final Action2<View, T> func) {
+    public <T> RxDataSource customiseRow (final int rowId, final Class<T> modelClass, final Action3<Integer, View, T> func) {
 
         if (listView == null) return this;
 
-        modelToRowMap.put(modelClass, new Func1<Object, RxRow>() {
+        modelToRowMap.put(modelClass, new Func2<Integer, Object, RxRow>() {
             @Override
-            public RxRow call(Object o) {
+            public RxRow call(Integer i, Object o) {
 
                 RxRow row = new RxRow(context, rowId, modelClass, listView);
                 View holder = row.getHolderView();
-                func.call(holder, (T) o);
+                func.call(i, holder, (T) o);
 
                 return row;
             }
@@ -91,15 +94,23 @@ public class RxDataSource {
                     public void call(final List<T> filteredData) {
 
                         Observable.from(filteredData)
-                                .map(new Func1<T, RxRow>() {
+                                .toList()
+                                .map(new Func1<List<T>, List<RxRow>>() {
                                     @Override
-                                    public RxRow call(T item) {
-                                        Class itemClass = item.getClass();
-                                        Func1<Object, RxRow> mappingFunc = modelToRowMap.get(itemClass);
-                                        return mappingFunc.call(item);
+                                    public List<RxRow> call(List<T> ts) {
+
+                                        List<RxRow> rows = new ArrayList<>();
+
+                                        for (int i = 0; i < ts.size(); i++) {
+                                            T item = ts.get(i);
+                                            Class itemClass = item.getClass();
+                                            Func2<Integer, Object, RxRow> mappingFunc = modelToRowMap.get(itemClass);
+                                            rows.add(mappingFunc.call(i, item));
+                                        }
+
+                                        return rows;
                                     }
                                 })
-                                .toList()
                                 .subscribe(new Action1<List<RxRow>>() {
                                     @Override
                                     public void call(final List<RxRow> rows) {
